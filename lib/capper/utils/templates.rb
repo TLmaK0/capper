@@ -1,8 +1,10 @@
 require "erubis"
 
+
 module Capper
   module Utils
     module Templates
+
 
       # render an erb template from config/deploy/templates to the current
       # server list. this will render and upload templates serially using a
@@ -25,6 +27,24 @@ module Capper
       end
 
       def upload_template(path, options={})
+        each_server(options) do |server|
+          erb = Erubis::Eruby.new(yield server)
+          result = erb.result(binding)
+          put(result, path, options.merge!(:hosts => server))
+        end
+      end
+
+      def upload_template_by_user(path, user, options={})
+        each_server(options) do |server|
+          erb = Erubis::Eruby.new(yield server)
+          result = erb.result(binding)
+          filename = File.basename(path,File.extname(path))
+          put(result, "/tmp/#{filename}", options)
+          run "sudo -u #{user} cp /tmp/#{filename} #{path}"
+        end
+      end
+
+      def each_server(options)
         if task = current_task
           servers = find_servers_for_task(task, options)
         else
@@ -36,12 +56,9 @@ module Capper
         end
 
         servers.each do |server|
-          erb = Erubis::Eruby.new(yield server)
-          result = erb.result(binding)
-          put(result, path, options.merge!(:hosts => server))
+          yield server
         end
       end
-
     end
   end
 end

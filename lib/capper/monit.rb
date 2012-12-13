@@ -9,20 +9,15 @@ namespace :monit do
   task :setup do
     configs = fetch(:monit_configs, {})
     servers = find_servers
-
-    upload_template(monitrc, :mode => "0644") do |server|
-      configs.select do |name, config|
-        roles = config[:options][:roles]
-        if roles.nil?
-          true
-        else
-          [roles].flatten.select do |r|
-            self.roles[r.to_sym].include?(server)
-          end.any?
-        end
-      end.map do |name, config|
-        "# #{name}\n#{config[:body]}"
-      end.join("\n\n")
+    options = {:mode => "0644"}
+    if (monit_user)
+      upload_template_by_user(monitrc, monit_user, options) do |server|
+        upload_template_config(configs, server)
+      end
+    else
+      upload_template(monitrc, options) do |server|
+        upload_template_config(configs, server)
+      end
     end
   end
 
@@ -30,5 +25,20 @@ namespace :monit do
   task :reload do    
     sudo_run = "sudo -u #{monit_user} " if monit_user
     run "#{sudo_run if monit_user}monit reload &>/dev/null && sleep 1"
+  end
+
+  def upload_template_config(configs, server)
+    configs.select do |name, config|
+      roles = config[:options][:roles]
+      if roles.nil?
+        true
+      else
+        [roles].flatten.select do |r|
+          self.roles[r.to_sym].include?(server)
+        end.any?
+      end
+    end.map do |name, config|
+      "# #{name}\n#{config[:body]}"
+    end.join("\n\n")
   end
 end

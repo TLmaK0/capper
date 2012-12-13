@@ -101,6 +101,10 @@ Custom monit configuration snippets can be created with ``monit_config``::
 The above call will create the specified monit snippet for monit instances
 running on servers in the ``:app`` role.
 
+set ``monit_user`` to change the user that runs the monit service::
+
+  set :monit_user, "root"
+
 Recipes
 =======
 
