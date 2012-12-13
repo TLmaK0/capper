@@ -1,4 +1,5 @@
 set(:monitrc) { "#{deploy_to}/.monitrc.local" }
+set(:monit_user) { nil }
 
 after "deploy:update_code", "monit:setup"
 before "deploy:restart", "monit:reload"
@@ -26,7 +27,8 @@ namespace :monit do
   end
 
   desc "Reload monit configuration"
-  task :reload do
-    run "monit reload &>/dev/null && sleep 1"
+  task :reload do    
+    sudo_run = "sudo -u #{monit_user} " if monit_user
+    run "#{sudo_run if monit_user}monit reload &>/dev/null && sleep 1"
   end
 end
